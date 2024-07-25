@@ -1,0 +1,52 @@
+<head>
+    <title id="title"></title>
+    <link rel="shortcut icon" type="image/x-icon" href="https://raw.githubusercontent.com/Divy0The0Fire/J4E/main/J4E.png">
+</head>
+<iframe id="home" src="home.html" width="100%" height="100%" style="border: none; background: black;"></iframe>
+<iframe id="settings" src="settings.html" width="100%" height="100%" style="border: none; background: black; display: none;"></iframe>
+<style>
+    body {
+        background-color: black;
+        color: white;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    
+    img,
+    video {
+        -webkit-user-drag: none;
+        user-select: none;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+    }
+</style>
+<script src="/eel.js"></script>
+
+<script>
+    function openSettings() {
+        document.getElementById("home").style.display = "none";
+        document.getElementById("settings").style.display = "block";
+    }
+
+    function openHome() {
+        document.getElementById("home").style.display = "block";
+        document.getElementById("settings").style.display = "none";
+    }
+    eel.expose(openSettings);
+    eel.expose(openHome);
+
+    function setup() {
+        eel.setup();
+        let title = document.getElementById("title");
+        title.innerHTML = eel.js_assistantname()().then(titl => {
+            title.innerHTML = titl
+        });
+    }
+    setup()
+    document.addEventListener('contextmenu', event => event.preventDefault());
+</script>
