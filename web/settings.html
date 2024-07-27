@@ -355,21 +355,32 @@
         }
         
         .settings .label_rtl {
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 1;
-            background-color: transparent;
             display: -webkit-box;
+            display: -moz-box;
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-box-orient: vertical;
+            -moz-box-orient: vertical;
+            -webkit-flex-direction: column;
+            -ms-flex-direction: column;
+            flex-direction: column;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            -webkit-line-clamp: 1; /* WebKit-specific */
+            line-clamp: 1; /* Future standard */
+            background-color: transparent;
             height: 21px;
             left: 49px;
             letter-spacing: 0.07px;
             line-height: normal;
-            overflow: hidden;
             position: absolute;
             text-align: left;
-            text-overflow: ellipsis;
             top: 22px;
             width: 444px;
+            white-space: nowrap;
         }
+        
         
         .settings .r-icons {
             background-color: transparent;
