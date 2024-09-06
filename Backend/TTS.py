@@ -19,24 +19,18 @@ async def TextToAudioFile(text) -> None:
     await communicate.save('data.mp3')
 
 def TextToSpeech(Text, func=lambda r=None: True):
-    while True:
-        try:
-            asyncio.run(TextToAudioFile(Text))
-            pygame.mixer.init()
-            pygame.mixer.music.load('data.mp3')
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                if func() == False:
-                    break
-                else:
-                    pygame.time.Clock().tick(10)
-            return None
-        except Exception as e:
-            pass
-        finally:
-            func(False)
-            pygame.mixer.music.stop()
-            pygame.mixer.quit()
+    asyncio.run(TextToAudioFile(Text))
+    pygame.mixer.init()
+    pygame.mixer.music.load('data.mp3')
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        if func() == False:
+            break
+        else:
+            pygame.time.Clock().tick(10)
+    func(False)
+    pygame.mixer.music.stop()
+    pygame.mixer.quit()
 
 def TTS(Text, func=lambda r=None: True):
     Data = str(Text).split('.')
