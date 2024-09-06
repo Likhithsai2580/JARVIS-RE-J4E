@@ -197,7 +197,7 @@ def System(command):
         if platform.system() == 'Darwin':
             return
         if platform.system() == 'Linux':
-            break
+            return
 
     def shutdown():
         if platform.system() == 'Windows':
