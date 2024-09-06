@@ -1,59 +1,92 @@
-# Decompiled with PyLingual (https://pylingual.io)
-# Internal filename: Backend\RSE.py
-# Bytecode version: 3.10.0rc2 (3439)
-# Source timestamp: 1970-01-01 00:00:00 UTC (0)
-
-from groq import Groq
-from googlesearch import search
-from json import load, dump
-from os import environ
+import json
 from dotenv import load_dotenv
-global SystemChat
-global messages
+from os import environ
+from googlesearch import search
+from groq import Groq
+
+# Load environment variables
 load_dotenv()
+
+# Globals
 client = Groq(api_key=environ['GroqAPI'])
-DefaultMessage = [{'role': 'user', 'content': f"Hello {environ['AssistantName']}, How are you?"}, {'role': 'assistant', 'content': f"Welcome Back {environ['NickName']}, I am doing well. How may i assist you?"}]
+default_messages = [{'role': 'user', 'content': f"Hello {environ['AssistantName']}, How are you?"}, 
+                    {'role': 'assistant', 'content': f"Welcome Back {environ['NickName']}, I am doing well. How may I assist you?"}]
+
+# Load or create chat log
 try:
     with open('ChatLog.json', 'r') as f:
-        messages = load(f)
-except:
+        messages = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
     with open('ChatLog.json', 'w') as f:
-        dump(DefaultMessage, f)
+        json.dump(default_messages, f, indent=4)
+    messages = default_messages
 
-def GoogleSearch(query):
+def GoogleSearch(query: str) -> str:
+    """Performs a Google search and returns formatted results."""
     results = list(search(query, advanced=True, num_results=5))
-    Answer = f"The search results for f'{query} 'are : \n[start]\n"
+    answer = f"The search results for '{query}' are:\n[start]\n"
     for i in results:
-        Answer += f'Title : {i.title}\nDiscription : {i.description}\n\n'
-    Answer += '[end]'
-    return Answer
-System = f"Hello, I am {environ['NickName']}, You are a very accurate and advance AI chatbot named {environ['AssistantName']} which have realtime up-to-date information of internet.\n*** Just answer the question from the provided data in a professional way. ***"
+        answer += f"Title: {i.title}\nDescription: {i.description}\n\n"
+    answer += "[end]"
+    return answer
 
-def AnswerModifier(Answer):
-    lines = Answer.split('\n')
+def AnswerModifier(answer: str) -> str:
+    """Cleans up the AI's answer, removing unnecessary line breaks and content."""
+    lines = answer.split('\n')
     non_empty_lines = [line for line in lines if line.strip()]
     modified_answer = '\n'.join(non_empty_lines)
     return modified_answer
-SystemChat = [{'role': 'system', 'content': System}, {'role': 'user', 'content': 'Do you have realtime data ?'}, {'role': 'assistant', 'content': 'Yes, I have all real time data.'}]
 
-def RealTimeChatBotAI(prompt):
+def RealTimeChatBotAI(prompt: str) -> str:
+    """Processes the user query, performs a real-time search, and returns the chatbot's response."""
     global messages
-    with open('ChatLog.json', 'r') as f:
-        messages = load(f)
-    SystemChat.append({'role': 'system', 'content': GoogleSearch(prompt)})
-    completion = client.chat.completions.create(model='mixtral-8x7b-32768', messages=SystemChat + messages, temperature=0.7, max_tokens=2048, top_p=1, stream=True, stop=None)
-    Answer = ''
-    for chunk in completion:
-        if chunk.choices[0].delta.content:
-            Answer += chunk.choices[0].delta.content
-    Answer = Answer.strip().replace('</s>', '')
-    Answer = Answer[0:Answer.find('[')]
-    messages.append({'role': 'assistant', 'content': Answer})
-    with open('ChatLog.json', 'w') as f:
-        dump(messages, f, indent=4)
-    SystemChat.pop()
-    return AnswerModifier(Answer)
+    
+    # Load messages (redundancy removed)
+    try:
+        with open('ChatLog.json', 'r') as f:
+            messages = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        messages = default_messages
+    
+    # Add Google Search results to SystemChat
+    search_results = GoogleSearch(prompt)
+    system_message = {'role': 'system', 'content': search_results}
+    system_chat = [{'role': 'system', 'content': f"Hello, I am {environ['NickName']}, You are a very accurate and advanced AI chatbot named {environ['AssistantName']} which has real-time up-to-date information from the internet.\n*** Just answer the question from the provided data in a professional way. ***"}]
+    system_chat.append(system_message)
+
+    # Send request to Groq API
+    try:
+        completion = client.chat.completions.create(
+            model='mixtral-8x7b-32768', 
+            messages=system_chat + messages, 
+            temperature=0.7, 
+            max_tokens=2048, 
+            top_p=1, 
+            stream=True, 
+            stop=None
+        )
+        
+        # Process the AI response in chunks
+        answer = ''
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                answer += chunk.choices[0].delta.content
+        answer = answer.strip().replace('</s>', '')
+        answer = answer[0:answer.find('[')]
+        
+        # Append the response to messages
+        messages.append({'role': 'assistant', 'content': answer})
+        
+        # Save updated chat log
+        with open('ChatLog.json', 'w') as f:
+            json.dump(messages, f, indent=4)
+        
+        return AnswerModifier(answer)
+    
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
 if __name__ == '__main__':
     while True:
-        prompt = input('Enter your query: ')
+        prompt = input("Enter your query: ")
         print(RealTimeChatBotAI(prompt))

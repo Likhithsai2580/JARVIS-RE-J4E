@@ -1,7 +1,3 @@
-# Decompiled with PyLingual (https://pylingual.io)
-# Internal filename: main.py
-# Bytecode version: 3.10.0rc2 (3439)
-# Source timestamp: 1970-01-01 00:00:00 UTC (0)
 import os
 import json
 import threading
@@ -15,21 +11,20 @@ import eel
 from dotenv import load_dotenv, set_key
 from threading import Lock
 
-# Import backend modules (assuming they are implemented correctly)
+# Import backend modules
 from Backend.Extra import AnswerModifier, QueryModifier, LoadMessages, GuiMessagesConverter
-from Backend.Automation import Automation, professional_responses
+from Backend.Automation import run_automation as Automation
+from Backend.Automation import PROFESSIONAL_RESPONSES as professional_responses
 from Backend.RSE import RealTimeChatBotAI
 from Backend.Chatbot import ChatBotAI
 from Backend.AutoModel import Model
 from Backend.ChatGpt import ChatBotAI as ChatGptAI
 from Backend.TTS import TTS
 
-#Lock set by kaushik
-import Backend.Security
-#remove this to unlock
-
 # Load environment variables
 load_dotenv()
+
+# Global variables
 state = 'Available...'
 messages = LoadMessages()
 WEBCAM = False
@@ -42,8 +37,7 @@ lock = Lock()
 
 def UniversalTranslator(Text: str) -> str:
     """Translates text to English."""
-    english_translation = mt.translate(Text, 'en', 'auto')
-    return english_translation.capitalize()
+    return mt.translate(Text, 'en', 'auto').capitalize()
 
 def MainExecution(Query: str):
     """Main execution function for handling user queries."""
@@ -56,38 +50,40 @@ def MainExecution(Query: str):
     state = 'Thinking...'
     Decision = Model(Query)
 
-    if 'general' in Decision or 'realtime' in Decision:
-        if Decision[0] == 'general':
-            if WEBCAM:
-                python_call_to_capture()
-                sleep(0.5)
-                Answer = ChatGptAI(Query)
+    try:
+        if 'general' in Decision or 'realtime' in Decision:
+            if Decision[0] == 'general':
+                if WEBCAM:
+                    python_call_to_capture()
+                    sleep(0.5)
+                    Answer = ChatGptAI(Query)
+                else:
+                    Answer = AnswerModifier(ChatBotAI(Query))
+                state = 'Answering...'
+                TTS(Answer)
             else:
-                Answer = AnswerModifier(ChatBotAI(Query))
-            state = 'Answering...'
-            TTS(Answer)
+                state = 'Searching...'
+                Answer = AnswerModifier(RealTimeChatBotAI(Query))
+                state = 'Answering...'
+                TTS(Answer)
+        elif 'open webcam' in Decision:
+            python_call_to_start_video()
+            print('Video Started')
+            WEBCAM = True
+        elif 'close webcam' in Decision:
+            print('Video Stopped')
+            python_call_to_stop_video()
+            WEBCAM = False
         else:
-            state = 'Searching...'
-            Answer = AnswerModifier(RealTimeChatBotAI(Query))
+            state = 'Automation...'
+            asyncio.run(Automation(Decision, print))
+            response = choice(professional_responses)
             state = 'Answering...'
-            TTS(Answer)
-    elif 'open webcam' in Decision:
-        python_call_to_start_video()
-        print('Video Started')
-        WEBCAM = True
-    elif 'close webcam' in Decision:
-        print('Video Stopped')
-        python_call_to_stop_video()
-        WEBCAM = False
-    else:
-        state = 'Automation...'
-        asyncio.run(Automation(Decision, print))
-        response = choice(professional_responses)
-        state = 'Answering...'
-        with open('ChatLog.json', 'w') as f:
-            json.dump(messages + [{'role': 'assistant', 'content': response}], f, indent=4)
-        TTS(response)
-    state = 'Listening...'
+            with open('ChatLog.json', 'w') as f:
+                json.dump(messages + [{'role': 'assistant', 'content': response}], f, indent=4)
+            TTS(response)
+    finally:
+        state = 'Listening...'
 
 @eel.expose
 def js_messages():
@@ -113,14 +109,7 @@ def js_state(stat=None):
 def js_mic(transcription):
     """Handles microphone input."""
     print(transcription)
-    if not working:
-        work = threading.Thread(target=MainExecution, args=(transcription,), daemon=True)
-        work.start()
-        working.append(work)
-    else:
-        if working[0].is_alive():
-            return
-        working.pop()
+    if not working or not working[0].is_alive():
         work = threading.Thread(target=MainExecution, args=(transcription,), daemon=True)
         work.start()
         working.append(work)
@@ -171,7 +160,7 @@ def setup():
 @eel.expose
 def js_language():
     """Returns the input language."""
-    return str(InputLanguage)
+    return InputLanguage
 
 @eel.expose
 def js_assistantname():
