@@ -1,8 +1,3 @@
-# Decompiled with PyLingual (https://pylingual.io)
-# Internal filename: Backend\Automation.py
-# Bytecode version: 3.10.0rc2 (3439)
-# Source timestamp: 1970-01-01 00:00:00 UTC (0)
-
 import requests
 import random
 import asyncio
